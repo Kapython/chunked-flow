@@ -69,13 +69,14 @@ jobs:
       with:
         task-definition: task_definition.json
         task-definition-family: feed-task-family
+        execution-role-arn: ${{ secrets.AWS_SERVICE_ROLE }}
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
         environment-variables: |
-          DB_HOST=$DB_HOST
-          DB_NAME=$DB_NAME
-          DB_USER=$DB_USER
-          DB_PASSWORD=$DB_PASSWORD
+          DB_HOST=${{ DB_HOST }}
+          DB_NAME=${{ DB_NAME }}
+          DB_USER=${{ DB_USER }}
+          DB_PASSWORD=${{ DB_PASSWORD }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1

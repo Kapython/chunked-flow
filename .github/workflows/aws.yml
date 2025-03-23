@@ -117,7 +117,7 @@ jobs:
                 \"LaunchType\": \"FARGATE\",
                 \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ vars.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
                 \"PlatformVersion\": \"LATEST\",
-                \"PropagateTags\": \"TASK_DEFINITION\"
+                \"PropagateTags\": \"TASK_DEFINITION\",
                 \"NetworkConfiguration\": {
                     \"awsvpcConfiguration\": {
                       \"Subnets\": [ \"${{ env.SUBNET }}\" ],

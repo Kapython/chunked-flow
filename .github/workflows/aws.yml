@@ -71,7 +71,7 @@ jobs:
         \"requiresCompatibilities\": [
             \"FARGATE\"
         ],
-        "networkMode": \"awsvpc\",
+        \"networkMode\": \"awsvpc\",
         \"cpu\": \"256\",
         \"memory\": \"512\"}" > task-definition.json
 

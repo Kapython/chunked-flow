@@ -7,6 +7,7 @@ env:
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
+  ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
 
 permissions:
   contents: read
@@ -58,8 +59,8 @@ jobs:
     - name: Create task definition json file
       run: |
         echo "{
-        \"family\": \"${{ vars.ASK_DEFINITION_FAMILY }}\",
-        \"executionRoleArn\": \"${{ secrets.AWS_SERVICE_ROLE }}\",
+        \"family\": \"${{ vars.ECS_DEFINITION_FAMILY }}\",
+        \"executionRoleArn\": \"arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
         \"containerDefinitions\": [
         {
             \"name\": \"${{ vars.CONTAINER_NAME }}\"
@@ -96,3 +97,25 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+    - name: Create/Update Scheduled Rule
+      run: |
+        aws events put-rule \
+          --name ${{ ECS_SCHEDULED_TASK_NAME }} \
+          --schedule-expression "cron(0 12 * * ? *)"
+
+        aws events put-targets \
+          --rule ${{ ECS_SCHEDULED_TASK_NAME }} \
+          --targets "[
+            {
+              \"Id\": \"1\",
+              \"Arn\": \"$(aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].clusterArn' --output text)\",
+              \"RoleArn\": \"arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsEventsRole\",
+              \"EcsParameters\": {
+                \"LaunchType\": \"FARGATE\",
+                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
+                \"PlatformVersion\": \"LATEST\",
+                \"PropagateTags\": \"TASK_DEFINITION\"
+              }
+            }
+          ]"

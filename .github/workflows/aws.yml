@@ -8,6 +8,8 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
   ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
+  SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
+  SUBNET: ${{ vars.SUBNET }}
 
 permissions:
   contents: read
@@ -116,6 +118,13 @@ jobs:
                 \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ vars.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
                 \"PlatformVersion\": \"LATEST\",
                 \"PropagateTags\": \"TASK_DEFINITION\"
+                \"NetworkConfiguration\": {
+                    \"awsvpcConfiguration\": {
+                      \"Subnets\": [ \"${{ SUBNET }}\" ],
+                      \"SecurityGroups\": [ \"${{ SECURITY_GROUP }}\" ],
+                      \"AssignPublicIp\": \"ENABLED\"
+                    }
+                  }
               }
             }
           ]"

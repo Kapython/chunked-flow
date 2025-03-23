@@ -10,6 +10,7 @@ env:
   ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
   SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
   SUBNET: ${{ vars.SUBNET }}
+  SCHEDULE_EXPRESSION: ${{ SCHEDULE-EXPRESSION }}
 
 permissions:
   contents: read
@@ -104,7 +105,7 @@ jobs:
       run: |
         aws events put-rule \
           --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --schedule-expression "cron(0 12 * * ? *)"
+          --schedule-expression "${{ env.SCHEDULE_EXPRESSION }}"
 
         aws events put-targets \
           --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \

@@ -4,26 +4,41 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }} 
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  REGION: ${{ vars.AWS_REGION }}
+  BUCKET: ${{ secrets.AWS_BUCKET }}
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  ECS_DEFINITION_FAMILY: ${{ vars.ECS_DEFINITION_FAMILY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
+  SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
+  SUBNET: ${{ vars.SUBNET }}
+  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE_EXPRESSION }}
 
 permissions:
   contents: read
 
 jobs:
   lint-and-test-deploy:
-    name: Lint & Test
+    name: Lint & Test & Deploy
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Install uv
       uses: astral-sh/setup-uv@v5
-    
+
     - name: Install the project
       run: uv sync --all-extras --dev
-        
+
     - name: Run lint
       run: uv run ruff check .
 
@@ -33,9 +48,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        aws-access-key-id: ${{ env.ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.REGION }}
 
     - name: Login to Amazon ECR
       id: login-ecr
@@ -53,3 +68,74 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Create task definition json file
+      run: |
+        echo "{
+        \"family\": \"${{ env.ECS_DEFINITION_FAMILY }}\",
+        \"executionRoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
+        \"containerDefinitions\": [
+        {
+            \"name\": \"${{ env.CONTAINER_NAME }}\"
+        }
+        ],
+        \"requiresCompatibilities\": [
+            \"FARGATE\"
+        ],
+        \"networkMode\": \"awsvpc\",
+        \"cpu\": \"256\",
+        \"memory\": \"512\"}" > task-definition.json
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        task-definition-family: feed-task-family
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+        environment-variables: |
+          DB_HOST=${{ env.DB_HOST }}
+          DB_NAME=${{ env.DB_NAME }}
+          DB_USER=${{ env.DB_USER }}
+          DB_PASSWORD=${{ env.DB_PASSWORD }}
+          AWS_BUCKET=${{ env.BUCKET }}
+          AWS_REGION=${{ env.REGION }}
+          AWS_ACCESS_KEY_ID=${{ env.ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ env.SECRET_ACCESS_KEY }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+    - name: Create/Update Scheduled Rule
+      run: |
+        aws events put-rule \
+          --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
+          --schedule-expression "${{ env.SCHEDULE_EXPRESSION }}"
+
+        aws events put-targets \
+          --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \
+          --targets "[
+            {
+              \"Id\": \"1\",
+              \"Arn\": \"$(aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].clusterArn' --output text)\",
+              \"RoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsEventsRole\",
+              \"EcsParameters\": {
+                \"LaunchType\": \"FARGATE\",
+                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ env.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
+                \"PlatformVersion\": \"LATEST\",
+                \"PropagateTags\": \"TASK_DEFINITION\",
+                \"NetworkConfiguration\": {
+                    \"awsvpcConfiguration\": {
+                      \"Subnets\": [ \"${{ env.SUBNET }}\" ],
+                      \"SecurityGroups\": [ \"${{ env.SECURITY_GROUP }}\" ],
+                      \"AssignPublicIp\": \"ENABLED\"
+                    }
+                  }
+              }
+            }
+          ]"

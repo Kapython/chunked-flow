@@ -69,6 +69,7 @@ jobs:
       with:
         task-definition: task_definition.json
         task-definition-family: feed-task-family
+        task-definition-arn: ${{ secrets.AWS_SERVICE_ROLE }}
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
         environment-variables: |

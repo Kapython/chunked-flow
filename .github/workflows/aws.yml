@@ -120,8 +120,8 @@ jobs:
                 \"PropagateTags\": \"TASK_DEFINITION\"
                 \"NetworkConfiguration\": {
                     \"awsvpcConfiguration\": {
-                      \"Subnets\": [ \"${{ SUBNET }}\" ],
-                      \"SecurityGroups\": [ \"${{ SECURITY_GROUP }}\" ],
+                      \"Subnets\": [ \"${{ env.SUBNET }}\" ],
+                      \"SecurityGroups\": [ \"${{ env.SECURITY_GROUP }}\" ],
                       \"AssignPublicIp\": \"ENABLED\"
                     }
                   }

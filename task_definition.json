@@ -1,6 +1,5 @@
 {
     "family": "feed-task-family",
-    "executionRoleArn": "arn:aws:iam::024315731313:role/ecsTaskExecutionRole",
     "containerDefinitions": [
         {
             "name": "feedContainerDev"

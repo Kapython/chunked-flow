@@ -5,13 +5,13 @@
     "networkMode": "bridge",
     "containerDefinitions": [
         {
-            "name": "",
+            "name": "feedContainerDev",
             "image": "",
             "repositoryCredentials": {
                 "credentialsParameter": ""
             },
-            "cpu": 0,
-            "memory": 0,
+            "cpu": 0.25,
+            "memory": 0.5,
             "memoryReservation": 0,
             "links": [
                 ""

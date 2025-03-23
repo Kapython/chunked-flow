@@ -8,7 +8,6 @@ env:
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }}
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
 
 permissions:
@@ -61,11 +60,11 @@ jobs:
     - name: Create task definition json file
       run: |
         echo "{
-        \"family\": \"feed-task-family\",
+        \"family\": \"${{ vars.ASK_DEFINITION_FAMILY }}\",
         \"executionRoleArn\": \"${{ secrets.AWS_SERVICE_ROLE }}\",
         \"containerDefinitions\": [
         {
-            \"name\": \"feedContainerDev\"
+            \"name\": \"${{ vars.CONTAINER_NAME }}\"
         }
         ],
         \"requiresCompatibilities\": [
@@ -78,22 +77,17 @@ jobs:
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
-      env:
-        DB_HOST: ${{ secrets.DB_HOST }}
-        DB_NAME: ${{ secrets.DB_NAME }}
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       with:
         task-definition: task-definition.json
         task-definition-family: feed-task-family
-        execution-role-arn: ${{ secrets.AWS_SERVICE_ROLE }}
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
         environment-variables: |
-          DB_HOST=${{ env.DB_HOST }}
-          DB_NAME=${{ env.DB_NAME }}
-          DB_USER=${{ env.DB_USER }}
-          DB_PASSWORD=${{ env.DB_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          AWS_BUCKET=${{ secrets.AWS_BUCKET }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1

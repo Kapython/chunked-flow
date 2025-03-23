@@ -4,13 +4,23 @@ on:
   workflow_dispatch:
 
 env:
+  ACCOUNT_ID: ${{ AWS_ACCOUNT_ID }}
+  ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  REGION: ${{ vars.AWS_REGION }}
+  BUCKET: ${{ secrets.AWS_BUCKET }}
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  ECS_DEFINITION_FAMILY: ${{ vars.ECS_DEFINITION_FAMILY }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
   ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
   SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
   SUBNET: ${{ vars.SUBNET }}
-  SCHEDULE_EXPRESSION: ${{ SCHEDULE-EXPRESSION }}
+  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE-EXPRESSION }}
 
 permissions:
   contents: read
@@ -38,9 +48,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.AWS_REGION }}
+        aws-access-key-id: ${{ env.ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.REGION }}
 
     - name: Login to Amazon ECR
       id: login-ecr
@@ -62,11 +72,11 @@ jobs:
     - name: Create task definition json file
       run: |
         echo "{
-        \"family\": \"${{ vars.ECS_DEFINITION_FAMILY }}\",
-        \"executionRoleArn\": \"arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
+        \"family\": \"${{ env.ECS_DEFINITION_FAMILY }}\",
+        \"executionRoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsTaskExecutionRole\",
         \"containerDefinitions\": [
         {
-            \"name\": \"${{ vars.CONTAINER_NAME }}\"
+            \"name\": \"${{ env.CONTAINER_NAME }}\"
         }
         ],
         \"requiresCompatibilities\": [
@@ -85,14 +95,14 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
         environment-variables: |
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          AWS_BUCKET=${{ secrets.AWS_BUCKET }}
-          AWS_REGION=${{ vars.AWS_REGION }}
-          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DB_HOST=${{ env.DB_HOST }}
+          DB_NAME=${{ env.DB_NAME }}
+          DB_USER=${{ env.DB_USER }}
+          DB_PASSWORD=${{ env.DB_PASSWORD }}
+          AWS_BUCKET=${{ env.BUCKET }}
+          AWS_REGION=${{ env.REGION }}
+          AWS_ACCESS_KEY_ID=${{ env.ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ env.SECRET_ACCESS_KEY }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -113,10 +123,10 @@ jobs:
             {
               \"Id\": \"1\",
               \"Arn\": \"$(aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].clusterArn' --output text)\",
-              \"RoleArn\": \"arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsEventsRole\",
+              \"RoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsEventsRole\",
               \"EcsParameters\": {
                 \"LaunchType\": \"FARGATE\",
-                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ vars.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
+                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ env.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
                 \"PlatformVersion\": \"LATEST\",
                 \"PropagateTags\": \"TASK_DEFINITION\",
                 \"NetworkConfiguration\": {

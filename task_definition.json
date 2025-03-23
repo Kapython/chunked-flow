@@ -7,5 +7,9 @@
             "memory": 512,
             "essential": true
         }
+    ],
+    "compatibilities": [
+        "FARGATE",
+        "EC2"
     ]
 }

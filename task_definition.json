@@ -1,15 +1,9 @@
 {
     "family": "feed-task-family",
-    "containerDefinitions": [
-        {
-            "name": "feedContainerDev",
-            "cpu": 256,
-            "memory": 512,
-            "essential": true
-        }
+    "requiresCompatibilities": [
+        "FARGATE"
     ],
-    "compatibilities": [
-        "FARGATE",
-        "EC2"
-    ]
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "512"
 }

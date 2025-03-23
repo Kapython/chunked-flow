@@ -105,7 +105,7 @@ jobs:
       run: |
         aws events put-rule \
           --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --schedule-expression "${{ env.SCHEDULE_EXPRESSION }}"
+          --schedule-expression ${{ env.SCHEDULE_EXPRESSION }}
 
         aws events put-targets \
           --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \

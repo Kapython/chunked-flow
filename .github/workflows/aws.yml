@@ -101,11 +101,11 @@ jobs:
     - name: Create/Update Scheduled Rule
       run: |
         aws events put-rule \
-          --name ${{ ECS_SCHEDULED_TASK_NAME }} \
+          --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
           --schedule-expression "cron(0 12 * * ? *)"
 
         aws events put-targets \
-          --rule ${{ ECS_SCHEDULED_TASK_NAME }} \
+          --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \
           --targets "[
             {
               \"Id\": \"1\",

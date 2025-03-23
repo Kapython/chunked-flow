@@ -113,7 +113,7 @@ jobs:
               \"RoleArn\": \"arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsEventsRole\",
               \"EcsParameters\": {
                 \"LaunchType\": \"FARGATE\",
-                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
+                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ vars.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
                 \"PlatformVersion\": \"LATEST\",
                 \"PropagateTags\": \"TASK_DEFINITION\"
               }

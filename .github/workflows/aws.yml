@@ -58,6 +58,23 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+    - name: Create task definition json file
+      run: |
+        echo "{
+        \"family\": \"feed-task-family\",
+        \"executionRoleArn\": \"${{ secrets.AWS_SERVICE_ROLE }}\",
+        \"containerDefinitions\": [
+        {
+            \"name\": \"feedContainerDev\"
+        }
+        ],
+        \"requiresCompatibilities\": [
+            \"FARGATE\"
+        ],
+        "networkMode": \"awsvpc\",
+        \"cpu\": \"256\",
+        \"memory\": \"512\"}" > task-definition.json
+
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -67,7 +84,7 @@ jobs:
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       with:
-        task-definition: task_definition.json
+        task-definition: task-definition.json
         task-definition-family: feed-task-family
         execution-role-arn: ${{ secrets.AWS_SERVICE_ROLE }}
         container-name: ${{ env.CONTAINER_NAME }}

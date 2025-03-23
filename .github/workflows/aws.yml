@@ -73,10 +73,10 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
         environment-variables: |
-          DB_HOST=${{ DB_HOST }}
-          DB_NAME=${{ DB_NAME }}
-          DB_USER=${{ DB_USER }}
-          DB_PASSWORD=${{ DB_PASSWORD }}
+          DB_HOST=${{ env.DB_HOST }}
+          DB_NAME=${{ env.DB_NAME }}
+          DB_USER=${{ env.DB_USER }}
+          DB_PASSWORD=${{ env.DB_PASSWORD }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1

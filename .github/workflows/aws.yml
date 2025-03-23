@@ -20,7 +20,7 @@ env:
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
   SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
   SUBNET: ${{ vars.SUBNET }}
-  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE-EXPRESSION }}
+  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE_EXPRESSION }}
 
 permissions:
   contents: read

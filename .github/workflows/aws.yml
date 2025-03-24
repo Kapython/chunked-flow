@@ -16,11 +16,7 @@ env:
   ECS_DEFINITION_FAMILY: ${{ vars.ECS_DEFINITION_FAMILY }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
-  SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
-  SUBNET: ${{ vars.SUBNET }}
-  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE_EXPRESSION }}
 
 permissions:
   contents: read
@@ -110,32 +106,3 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
-
-    - name: Create/Update Scheduled Rule
-      run: |
-        aws events put-rule \
-          --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --schedule-expression "${{ env.SCHEDULE_EXPRESSION }}"
-
-        aws events put-targets \
-          --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --targets "[
-            {
-              \"Id\": \"1\",
-              \"Arn\": \"$(aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].clusterArn' --output text)\",
-              \"RoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsEventsRole\",
-              \"EcsParameters\": {
-                \"LaunchType\": \"FARGATE\",
-                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ env.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
-                \"PlatformVersion\": \"LATEST\",
-                \"PropagateTags\": \"TASK_DEFINITION\",
-                \"NetworkConfiguration\": {
-                    \"awsvpcConfiguration\": {
-                      \"Subnets\": [ \"${{ env.SUBNET }}\" ],
-                      \"SecurityGroups\": [ \"${{ env.SECURITY_GROUP }}\" ],
-                      \"AssignPublicIp\": \"ENABLED\"
-                    }
-                  }
-              }
-            }
-          ]"

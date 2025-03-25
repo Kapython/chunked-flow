@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     debug: bool = False
     title: str = "Chunked-Flow"
-    version: str = "0.0.1"
+    version: str = "0.0.2"
 
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(levelname)s - %(message)s"
@@ -22,10 +22,11 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 5432
     db: str = "postgresql"
+    db_table_name: str
 
     concurrency_limit: int = 10
-
-    chunk_size: int = 10
+    chunk_size: int = 100
+    offset_initial: int | None = None
 
     aws_bucket: str = ""
     aws_region: str = ""

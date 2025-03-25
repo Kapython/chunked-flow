@@ -13,14 +13,13 @@ env:
   DB_NAME: ${{ secrets.DB_NAME }}
   DB_USER: ${{ secrets.DB_USER }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_TABLE_NAME: ${{ vars.DB_TABLE_NAME }}
   ECS_DEFINITION_FAMILY: ${{ vars.ECS_DEFINITION_FAMILY }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  ECS_SCHEDULED_TASK_NAME: feed-scheduled-task
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
-  SECURITY_GROUP: ${{ vars.SECURITY_GROUP }}
-  SUBNET: ${{ vars.SUBNET }}
-  SCHEDULE_EXPRESSION: ${{ vars.SCHEDULE_EXPRESSION }}
+  CHUNK_SIZE: ${{ vars.CHUNK_SIZE }}
+  CONCURRENCY_LIMIT: ${{ vars.CONCURRENCY_LIMIT }}
 
 permissions:
   contents: read
@@ -99,10 +98,13 @@ jobs:
           DB_NAME=${{ env.DB_NAME }}
           DB_USER=${{ env.DB_USER }}
           DB_PASSWORD=${{ env.DB_PASSWORD }}
+          DB_TABLE_NAME=${{ env.DB_TABLE_NAME }}
           AWS_BUCKET=${{ env.BUCKET }}
           AWS_REGION=${{ env.REGION }}
           AWS_ACCESS_KEY_ID=${{ env.ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ env.SECRET_ACCESS_KEY }}
+          CHUNK_SIZE=${{ env.CHUNK_SIZE }}
+          CONCURRENCY_LIMIT=${{ env.CONCURRENCY_LIMIT }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -110,32 +112,3 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
-
-    - name: Create/Update Scheduled Rule
-      run: |
-        aws events put-rule \
-          --name ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --schedule-expression "${{ env.SCHEDULE_EXPRESSION }}"
-
-        aws events put-targets \
-          --rule ${{ env.ECS_SCHEDULED_TASK_NAME }} \
-          --targets "[
-            {
-              \"Id\": \"1\",
-              \"Arn\": \"$(aws ecs describe-clusters --clusters ${{ env.ECS_CLUSTER }} --query 'clusters[0].clusterArn' --output text)\",
-              \"RoleArn\": \"arn:aws:iam::${{ env.ACCOUNT_ID }}:role/ecsEventsRole\",
-              \"EcsParameters\": {
-                \"LaunchType\": \"FARGATE\",
-                \"TaskDefinitionArn\": \"$(aws ecs list-task-definitions --family-prefix ${{ env.ECS_DEFINITION_FAMILY }} --sort DESC --query 'taskDefinitionArns[0]' --output text)\",
-                \"PlatformVersion\": \"LATEST\",
-                \"PropagateTags\": \"TASK_DEFINITION\",
-                \"NetworkConfiguration\": {
-                    \"awsvpcConfiguration\": {
-                      \"Subnets\": [ \"${{ env.SUBNET }}\" ],
-                      \"SecurityGroups\": [ \"${{ env.SECURITY_GROUP }}\" ],
-                      \"AssignPublicIp\": \"ENABLED\"
-                    }
-                  }
-              }
-            }
-          ]"

@@ -2,7 +2,7 @@ from typing import Protocol
 
 
 class Fetcher(Protocol):
-    async def fetch_data(self, offset: int, limit: int) -> list[dict]: ...
+    async def fetch_data(self, offset: int, limit: int, table: str) -> list[dict]: ...
 
 
 class Saver(Protocol):

@@ -15,29 +15,19 @@ class PostgresOperator(Fetcher):
     def __init__(self, pool: asyncpg.Pool):
         self.pool = pool
 
-    async def fetch_data(self, offset: int, limit: int) -> list[dict]:
+    async def fetch_data(self, offset: int, limit: int, table: str) -> list[dict]:
         """Fetch a chunk of facility records."""
-        rows = await self.get_rows(offset, limit)
+        rows = await self.get_rows(offset, limit, table)
+        logger.debug(f"PostgresOperator.fetch_data: {len(rows)} rows were fetched.")
         return [dict(row) for row in rows]
 
-    async def get_rows(self, offset: int, limit: int):
+    async def get_rows(self, offset: int, limit: int, table: str):
         """
         Fetches a paginated list of records from the database.
         """
         start = datetime.now()
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT id, name, phone, url, latitude, longitude, country,
-                       locality, region, postal_code, street_address
-                FROM facility
-                ORDER BY id
-                OFFSET $1
-                LIMIT $2
-                """,
-                offset,
-                limit,
-            )
+            rows = await conn.fetch(f"SELECT * FROM {table} WHERE id > $1 ORDER BY id LIMIT $2", offset, limit)  # noqa S608
         logger.debug(
             f"PostgresOperator.get_rows: {len(rows)} rows were fetched."
             f" Offset: {offset}. Chunk {limit}. Time: {(datetime.now() - start).total_seconds()}"
@@ -94,3 +84,24 @@ class MetadataOperator(Saver):
         )
         status = res.get("ResponseMetadata", {}).get("HTTPStatusCode", False)
         return status == self.success_http_code
+
+
+class OffsetManager:
+    offset: int | None = None
+    pool: asyncpg.Pool
+
+    def __init__(self, pool: asyncpg.Pool, offset: int | None = None):
+        self.pool = pool
+        self.offset = offset
+
+    async def fetch_offset(self, table: str) -> int:
+        """
+        Fetches the minimum offset value from the database or returns the pre-existing offset.
+        """
+        if self.offset:
+            return self.offset
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(f"SELECT MIN(id) FROM {table}")  # noqa S608
+        offset = row[0] - 1 if row[0] else 0
+        logger.debug(f"PostgresOperator.fetch_offset: Offset - {offset}")
+        return offset

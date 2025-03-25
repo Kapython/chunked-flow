@@ -6,6 +6,7 @@ from src.chunk.infra.payload import ChunkPayload
 from src.chunk.infra.processor import ChunkProcessor
 from src.chunk.infra.storage import AWSOperator, MetadataOperator, PostgresOperator
 from src.chunk.main.config import get_db_pool, get_s3_session
+from src.chunk.main.constants import VALID_TABLES
 from src.chunk.main.settings import get_settings
 
 
@@ -31,6 +32,8 @@ async def run():
     )
     metadata = MetadataOperator(session=session, bucket=settings.aws_bucket)
     service = FeedService(settings=settings, pool=pool, processor=processor, metadata=metadata)
+    if settings.db_table_name not in VALID_TABLES:
+        raise ValueError(f"Invalid table name: {settings.table}")
     start = datetime.now()
     logger.info("service.run: Starting processing")
     await service.feed()

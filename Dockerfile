@@ -25,6 +25,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-EXPOSE 5432
-
 CMD ["uv", "run", "src/chunk/main/main.py"]

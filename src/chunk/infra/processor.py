@@ -28,7 +28,10 @@ class ChunkProcessor(Processor):
     async def handle(self, offset: int, uploaded_files: list):
         """Fetch a chunk from DB, transform, compress, and save."""
         logger.debug(f"ChunkProcessor.handle: Processing chunk {offset}")
-        rows = await self.fetcher.fetch_data(offset, self.settings.chunk_size)
+        rows = await self.fetcher.fetch_data(offset, self.settings.chunk_size, self.settings.db_table_name)
+        logger.debug(
+            f"ChunkProcessor.handle: {len(rows)} rows were fetched. Offset: {offset}. Chunk {self.settings.chunk_size}"
+        )
         if not rows:
             return False
 

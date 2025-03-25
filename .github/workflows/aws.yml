@@ -18,6 +18,8 @@ env:
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
+  CHUNK_SIZE: ${{ vars.CHUNK_SIZE }}
+  CONCURRENCY_LIMIT: ${{ vars.CONCURRENCY_LIMIT }}
 
 permissions:
   contents: read
@@ -101,6 +103,8 @@ jobs:
           AWS_REGION=${{ env.REGION }}
           AWS_ACCESS_KEY_ID=${{ env.ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ env.SECRET_ACCESS_KEY }}
+          CHUNK_SIZE=${{ env.CHUNK_SIZE }}
+          CONCURRENCY_LIMIT=${{ env.CONCURRENCY_LIMIT }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     db_table_name: str
 
     concurrency_limit: int = 10
-    chunk_size: int = 10
+    chunk_size: int = 100
     offset_initial: int | None = None
 
     aws_bucket: str = ""

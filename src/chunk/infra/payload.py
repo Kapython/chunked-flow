@@ -1,3 +1,4 @@
+import asyncio
 import gzip
 import io
 import json
@@ -38,7 +39,18 @@ class ChunkPayload(Payload):
     async def compress(self, data_str: str) -> bytes:
         """Return GZIP-compressed bytes of the data string."""
         buffer = io.BytesIO()
+        loop = asyncio.get_running_loop()
+        # Run the blocking function in a ThreadPoolExecutor to avoid blocking event loop
+        await loop.run_in_executor(
+            None,  # use default thread pool
+            self._payload_gzip,
+            data_str,
+            buffer,
+        )
+        return buffer.getvalue()
+
+    @staticmethod
+    def _payload_gzip(data_str: str, buffer: io.BytesIO) -> None:
+        """Write GZIP-compressed bytes of the data string to the buffer."""
         with gzip.GzipFile(fileobj=buffer, mode="wb") as gz:
             gz.write(data_str.encode("utf-8"))
-        logger.debug(f"ChunkPayload.compress: Compressed data size: {buffer.getbuffer().nbytes}")
-        return buffer.getvalue()
